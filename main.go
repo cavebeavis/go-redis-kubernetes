@@ -144,7 +144,7 @@ func getQuoteFromAPI() (*QuoteResponse, error) {
 		json.NewDecoder(resp.Body).Decode(quoteResp)
 		return quoteResp, nil
 	} else {
-		return nil, errors.New("Could not get quote from API")
+		return nil, errors.New("could not get quote from API")
 	}
 
 }

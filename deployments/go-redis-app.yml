@@ -93,4 +93,16 @@ spec:
             value: redis-master
           - name: REDIS_PORT
             value: "6379"    
-
+      initContainers:
+      - name: master
+        image: redis
+        command: ["/bin/sh", "-c", "for i in $(seq 1 100); do redis-cli && exit 0 || sleep 3; done; exit 1"]
+        resources:               # See: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 250m
+            memory: 250Mi
+        ports:
+        - containerPort: 6379 
