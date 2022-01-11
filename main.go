@@ -15,31 +15,31 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Welcome! Please hit the `/qod` API to get the quote of the day."))
+type QuoteData struct {
+	Id         string   `json:"id"`
+	Quote      string   `json:"quote"`
+	Length     string   `json:"length"`
+	Author     string   `json:"author"`
+	Tags       []string `json:"tags"`
+	Category   string   `json:"category"`
+	Date       string   `json:"date"`
+	Permalink  string   `json:"parmalink"`
+	Title      string   `json:"title"`
+	Background string   `json:"Background"`
 }
 
-func quoteOfTheDayHandler(client *redis.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		currentTime := time.Now()
-		date := currentTime.Format("2006-01-02")
+type QuoteResponse struct {
+	Success  APISuccess   `json:"success"`
+	Contents QuoteContent `json:"contents"`
+}
 
-		val, err := client.Get(date).Result()
-		if err == redis.Nil {
-			log.Println("Cache miss for date ", date)
-			quoteResp, err := getQuoteFromAPI()
-			if err != nil {
-				w.Write([]byte("Sorry! We could not get the Quote of the Day. Please try again."))
-				return
-			}
-			quote := quoteResp.Contents.Quotes[0].Quote
-			client.Set(date, quote, 24*time.Hour)
-			w.Write([]byte(quote))
-		} else {
-			log.Println("Cache Hit for date ", date)
-			w.Write([]byte(val))
-		}
-	}
+type QuoteContent struct {
+	Quotes    []QuoteData `json:"quotes"`
+	Copyright string      `json:"copyright"`
+}
+
+type APISuccess struct {
+	Total string `json:"total"`
 }
 
 func main() {
@@ -100,6 +100,34 @@ func waitForShutdown(srv *http.Server) {
 
 	log.Println("Shutting down")
 	os.Exit(0)
+}
+
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Welcome! Please hit the `/qod` API to get the quote of the day."))
+}
+
+func quoteOfTheDayHandler(client *redis.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		currentTime := time.Now()
+		date := currentTime.Format("2006-01-02")
+
+		val, err := client.Get(date).Result()
+		if err == redis.Nil {
+			log.Println("Cache miss for date ", date)
+			quoteResp, err := getQuoteFromAPI()
+			if err != nil {
+				w.Write([]byte("Sorry! We could not get the Quote of the Day. Please try again."))
+				return
+			}
+			quote := quoteResp.Contents.Quotes[0].Quote
+			client.Set(date, quote, 24*time.Hour)
+			w.Write([]byte(quote))
+		} else {
+			log.Println("Cache Hit for date ", date)
+			w.Write([]byte(val))
+		}
+	}
 }
 
 func getQuoteFromAPI() (*QuoteResponse, error) {
