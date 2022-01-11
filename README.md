@@ -72,10 +72,13 @@ Install instructions: https://kompose.io/installation/
 ## Deployment
 
 ```
+$ kubectl config use-context {your-context-name -or- minikube (if installed)}
+
+
 $ docker build -t go-redis-kubernetes .
-$ docker tag go-redis-kubernetes cavebeavis/go-redis-app:1.0.0
+$ docker tag go-redis-kubernetes {your dockerhub handle if you want to upload the image}/go-redis-app:1.0.0
 $ docker login
-$ docker push cavebeavis/go-redis-app:1.0.0
+$ docker push {your dockerhub handle if you want to upload the image}/go-redis-app:1.0.0
 
 $ kubectl apply -f deployments/go-redis-app.yml
 $ kubectl get pods -A
