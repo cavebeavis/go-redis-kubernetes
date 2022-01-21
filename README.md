@@ -85,9 +85,9 @@ $ kubectl config use-context {your-context-name -or- minikube (if installed)}
 
 
 $ docker build -t go-redis-kubernetes .
-$ docker tag go-redis-kubernetes {your dockerhub handle if you want to upload the image}/go-redis-app:1.0.0
+$ docker tag go-redis-kubernetes {name}/go-redis-app:1.0.0 # where {name} is your dockerhub handle if you want to upload the image
 $ docker login
-$ docker push {your dockerhub handle if you want to upload the image}/go-redis-app:1.0.0
+$ docker push {name}/go-redis-app:1.0.0 # where {name} is your dockerhub handle if you want to upload the image
 
 $ kubectl apply -f deployments/go-redis-app.yml
 $ kubectl get pods -A
@@ -135,5 +135,27 @@ $ kubectl delete -f deployments/go-redis-app.yml
 # deployment.apps "redis-master" deleted
 # service "go-redis-app-service" deleted
 # deployment.apps "go-redis-app" deleted
+
+```
+
+## Monitoring
+
+**Prometheus and Grafana Links**
+
+Thanks bibinwilson -- you rock! :man_singer:
+
+https://devopscube.com/setup-prometheus-monitoring-on-kubernetes/
+
+https://github.com/bibinwilson/kubernetes-prometheus
+
+https://devopscube.com/setup-grafana-kubernetes/
+
+https://github.com/bibinwilson/kubernetes-grafana
+
+```bash
+$ kubectl create namespace monitoring
+namespace/monitoring created
+
+$ 
 
 ```

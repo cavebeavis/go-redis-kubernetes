@@ -1,3 +1,41 @@
+### DO NOT UNCOMMENT THIS UNLESS YOU ARE CERTAIN!
+### Better to do: kubectl create namespace gosmapi --dry-run=client -o yaml | kubectl apply -f -
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: gosmapi
+# ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configs-env
+data:
+  EX_ENCRYPT_KEY_FILE: enc.key
+  EX_ENCRYPT_KEY_FOLDER: /opt/sm/
+  EX_SUFFIX: this-should-be-replaced-with-a-random-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-1
+type: Opaque
+data:
+  key1: SHVtcHR5IER1bXB0eSBzYXQgb24gaGlzIGFzcy4=
+  key2: SHVtcHR5IER1bXB0eSB3YXMgbWFkZSBvZiBicmFzcy4=
+immutable: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-2
+type: Opaque
+data:
+  key3: U28gd2UgcGlzc2VkIG9uIGhpcyBzaGVlbiw=
+  key4: QW5kIHR1cm5lZCBoaW0gdG8gZ3JlZW4u
+  punch: QW5kIG5vdyBoZSBqdXN0IHNsZWVwcyBpbiB0aGUgZ3Jhc3Mu
+  abc: eyJuYW1lIjoic3VwZXIgc2VjcmV0IHN0dWZmIGluIGhlcmUiLCJ0cyI6IjIwMjItMDEtMTQgMTI6MjE6NTAzNFoiLCJtb2RpZmllZCI6IjIwMjItMDEtMTQgMTI6MjE6NTAzNFoiLCJkYXRhIjp7ImtleTEiOiJwb29wISJ9fQ==
+immutable: true
+---
 apiVersion: v1
 kind: Service        # Type of Kubernetes resource
 metadata:
@@ -22,12 +60,12 @@ metadata:
   labels:
     app: redis       # Labels to be applied to this resource
 spec:
+  replicas: 1        # Run a single pod in the deployment
   selector:
     matchLabels:     # This deployment applies to the Pods matching these labels
       app: redis
       role: master
       tier: backend
-  replicas: 1        # Run a single pod in the deployment
   template:          # Template for the pods that will be created by this deployment
     metadata:
       labels:        # Labels to be applied to the Pods in this deployment
@@ -75,9 +113,23 @@ spec:
       labels:                    # The labels that will be applied to all of the pods in this deployment
         app: go-redis-app 
     spec:
+      volumes:
+      - name: secret-volume-1
+        secret:
+          secretName: secret-1
+      - name: secret-volume-2
+        secret:
+          secretName: secret-2
       containers:
       - name: go-redis-app
-        image: cavebeavis/go-redis-app:1.0.0 
+        image: cavebeavis/go-redis-app:1.0.0
+        volumeMounts:
+        - name: secret-volume-1
+          readOnly: true
+          mountPath: "/opt/sm/secret-volume-1"
+        - name: secret-volume-2
+          readOnly: true
+          mountPath: "/opt/sm/secret-volume-2"
         imagePullPolicy: IfNotPresent
         resources:               # See: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
           requests:
@@ -92,7 +144,22 @@ spec:
           - name: REDIS_HOST
             value: redis-master
           - name: REDIS_PORT
-            value: "6379"    
+            value: "6379"
+          - name: EX_ENCRYPT_KEY_FILE
+            valueFrom:
+              configMapKeyRef:
+                key: EX_ENCRYPT_KEY_FILE
+                name: configs-env
+          - name: EX_ENCRYPT_KEY_FOLDER
+            valueFrom:
+              configMapKeyRef:
+                key: EX_ENCRYPT_KEY_FOLDER
+                name: configs-env
+          - name: EX_SUFFIX
+            valueFrom:
+              configMapKeyRef:
+                key: EX_SUFFIX
+                name: configs-env   
       initContainers:
       - name: master
         image: redis
@@ -105,4 +172,76 @@ spec:
             cpu: 250m
             memory: 250Mi
         ports:
-        - containerPort: 6379 
+        - containerPort: 6379
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  ports:
+    - name: "27017"
+      port: 27017
+      targetPort: 27017
+  selector:
+    app: go-mongo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:     # This deployment applies to the Pods matching these labels
+      app: go-mongo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:       
+        app: go-mongo 
+    spec:
+      containers:
+        - env:
+            - name: MONGODB_PASSWORD
+              value: example
+            - name: MONGODB_USERNAME
+              value: root
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: example
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: root
+            - name: SM_ENV
+              value: dev
+          image: mongo:4.0
+          name: mongodb
+          ports:
+            - containerPort: 27017
+          resources:               # See: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+            requests:
+              cpu: 100m
+              memory: 20Mi
+            limits:
+              cpu: 500m
+              memory: 50Mi
+          volumeMounts:
+            - mountPath: /data/db
+              name: mongodb-data
+      restartPolicy: Always
+      volumes:
+        - name: mongodb-data
+          persistentVolumeClaim:
+            claimName: mongodb-data
+
