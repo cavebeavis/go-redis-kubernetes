@@ -16,7 +16,7 @@ jobs:
         run: |
           fullbranch=$(sed 's!refs/heads/!!g' <<< ${{ github.event.ref }})
           echo "Debug: $fullbranch"
-          branch="${$fullbranch##*/}"
+          branch="$fullbranch"
           branch=$(sed 's!/!!g' <<< $branch | awk '{print tolower($0)}')
           branch=$(sed 's!_!!g' <<< $branch)
           branch=$(sed 's!\.!!g' <<< $branch)
