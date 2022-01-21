@@ -4,7 +4,22 @@ jobs:
   delete:
     if: github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
+    outputs:
+      fullbranch: ${{ steps.extract-branch-name.outputs.fullbranch }}
+      branch: ${{ steps.extract-branch-name.outputs.branch }}
     steps:
       - name: Clean up
         run: |
           echo "Clean up for branch ${{ github.event.ref }}"
+      - name: Extract branch name
+        id: extract-branch-name
+        run: |
+          fullbranch=$(sed 's!refs/heads/!!g' <<< ${GITHUB_REF})
+          branch="${GITHUB_REF##*/}"
+          branch=$(sed 's!/!!g' <<< $branch | awk '{print tolower($0)}')
+          branch=$(sed 's!_!!g' <<< $branch)
+          branch=$(sed 's!\.!!g' <<< $branch)
+          branch=$(sed 's![^[:print:]\t]!!g' <<< $branch)
+          echo "Extracted branch names: $branch $fullbranch"
+          echo "::set-output name=branch::$branch"
+          echo "::set-output name=fullbranch::$fullbranch"
